@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 import tensorflow as tf
 
+from tensorflow.keras.preprocessing import image
+
 
 class GradCAM:
 
@@ -61,6 +63,40 @@ class GradCAM:
             heatmap,
             alpha,
             0
+        )
+
+        return overlay
+
+    def create_gradcam(self, image_path):
+
+        img = image.load_img(
+            image_path,
+            target_size=(224, 224)
+        )
+
+        img_array = image.img_to_array(img)
+
+        img_array = img_array.astype("float32")
+
+        img_array /= 255.0
+
+        img_array = np.expand_dims(
+            img_array,
+            axis=0
+        )
+
+        heatmap = self.generate_heatmap(img_array)
+
+        original = cv2.imread(image_path)
+
+        original = cv2.cvtColor(
+            original,
+            cv2.COLOR_BGR2RGB
+        )
+
+        overlay = self.overlay_heatmap(
+            heatmap,
+            original
         )
 
         return overlay

@@ -9,9 +9,11 @@ from components import (
     prediction_card,
     probability_table,
     cnn_metrics,
-    morphology_placeholder,
     hybrid_placeholder
 )
+
+from morphology_component import show_morphology
+
 
 # ======================================================
 # Load CNN Model
@@ -47,7 +49,9 @@ def show_predict_page():
 
         return
 
-    # ---------------------------------------------------
+    # =====================================================
+    # Save Uploaded Image
+    # =====================================================
 
     with tempfile.NamedTemporaryFile(
         delete=False,
@@ -58,15 +62,17 @@ def show_predict_page():
 
         image_path = tmp.name
 
-    # ---------------------------------------------------
+    # =====================================================
+    # CNN Prediction
+    # =====================================================
 
     result = predictor.predict(image_path)
 
-    # ===================================================
-    # Original Image + Prediction
-    # ===================================================
+    # =====================================================
+    # Original MRI + Prediction
+    # =====================================================
 
-    col1, col2 = st.columns([1,1])
+    col1, col2 = st.columns(2)
 
     with col1:
 
@@ -86,9 +92,9 @@ def show_predict_page():
 
     st.markdown("---")
 
-    # ===================================================
-    # Probability Table
-    # ===================================================
+    # =====================================================
+    # Prediction Probabilities
+    # =====================================================
 
     probability_table(
         result["probabilities"]
@@ -96,9 +102,9 @@ def show_predict_page():
 
     st.markdown("---")
 
-    # ===================================================
-    # GradCAM
-    # ===================================================
+    # =====================================================
+    # Grad-CAM
+    # =====================================================
 
     st.subheader("Grad-CAM Heatmap")
 
@@ -108,45 +114,49 @@ def show_predict_page():
 
     st.image(
         heatmap,
+        caption="Grad-CAM Heatmap",
         use_container_width=True
     )
 
     st.markdown("---")
 
-    # ===================================================
+    # =====================================================
     # CNN Metrics
-    # ===================================================
+    # =====================================================
 
     cnn_metrics()
 
     st.markdown("---")
 
-    # ===================================================
-    # Morphology
-    # ===================================================
+    # =====================================================
+    # Morphology Analysis
+    # =====================================================
 
-    morphology_placeholder()
+    show_morphology(image_path)
 
     st.markdown("---")
 
-    # ===================================================
-    # Hybrid
-    # ===================================================
+    # =====================================================
+    # Hybrid Prediction
+    # =====================================================
 
     hybrid_placeholder()
 
     st.markdown("---")
 
-    # ===================================================
+    # =====================================================
     # Final Diagnosis
-    # ===================================================
+    # =====================================================
 
     st.subheader("Final Diagnosis")
 
     st.info(
-        "Final diagnosis will be generated after the Hybrid Model is trained."
+        "Hybrid Model training is pending. Final diagnosis will be displayed after the Hybrid Model is completed."
     )
 
-    # ---------------------------------------------------
+    # =====================================================
+    # Cleanup
+    # =====================================================
 
-    os.remove(image_path)
+    if os.path.exists(image_path):
+        os.remove(image_path)

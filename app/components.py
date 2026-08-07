@@ -54,42 +54,40 @@ def probability_table(probabilities):
 # =====================================================
 # CNN Metrics
 # =====================================================
+import os
 
 def cnn_metrics():
 
     st.subheader("CNN Performance")
 
-    c1,c2,c3,c4 = st.columns(4)
+    c1, c2, c3, c4 = st.columns(4)
 
     with c1:
-
-        st.metric(
-            "Accuracy",
-            "81.19%"
-        )
+        st.metric("Accuracy", "88.06%")
 
     with c2:
-
-        st.metric(
-            "Precision",
-            "81.71%"
-        )
+        st.metric("Precision", "88.39%")
 
     with c3:
-
-        st.metric(
-            "Recall",
-            "81.19%"
-        )
+        st.metric("Recall", "88.06%")
 
     with c4:
+        st.metric("F1 Score", "87.77%")
 
-        st.metric(
-            "F1 Score",
-            "80.47%"
+    st.markdown("---")
+
+    st.subheader("CNN Confusion Matrix")
+
+    image_path = "outputs/confusion_matrix/cnn_confusion_matrix.png"
+
+    if os.path.exists(image_path):
+        st.image(
+            image_path,
+            caption="CNN Confusion Matrix",
+            use_container_width=True
         )
-
-
+    else:
+        st.warning("Confusion Matrix not found.")
 # =====================================================
 # Morphology Placeholder
 # =====================================================

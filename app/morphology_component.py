@@ -1,9 +1,7 @@
-
 import cv2
 import streamlit as st
 
 from src.morphology import MorphologyAnalyzer
-
 
 morphology = MorphologyAnalyzer()
 
@@ -17,13 +15,20 @@ def show_morphology(image_path):
         cv2.COLOR_BGR2RGB
     )
 
+    # Morphology Processing
     mask = morphology.segment(image)
+
+    gradient = morphology.gradient(image)
 
     contour_image, _ = morphology.draw_contours(image)
 
     features = morphology.extract_features(image)
 
     st.subheader("Morphology Analysis")
+
+    # ==================================================
+    # Binary Mask & Gradient
+    # ==================================================
 
     col1, col2 = st.columns(2)
 
@@ -38,12 +43,30 @@ def show_morphology(image_path):
     with col2:
 
         st.image(
-            contour_image,
-            caption="Tumor Contours",
+            gradient,
+            caption="Morphological Gradient",
             use_container_width=True
         )
 
-    st.markdown("### Morphological Features")
+    st.markdown("---")
+
+    # ==================================================
+    # Contours
+    # ==================================================
+
+    st.image(
+        contour_image,
+        caption="Tumor Contours",
+        use_container_width=True
+    )
+
+    st.markdown("---")
+
+    # ==================================================
+    # Morphological Features
+    # ==================================================
+
+    st.subheader("Morphological Features")
 
     c1, c2 = st.columns(2)
 
@@ -54,6 +77,11 @@ def show_morphology(image_path):
             features["tumor_area"]
         )
 
+        st.metric(
+            "Contour Count",
+            features["contour_count"]
+        )
+
     with c2:
 
         st.metric(
@@ -62,4 +90,10 @@ def show_morphology(image_path):
                 features["largest_contour_area"],
                 2
             )
+        )
+
+        st.write("Bounding Box")
+
+        st.write(
+            features["bounding_box"]
         )

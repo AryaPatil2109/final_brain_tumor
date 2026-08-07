@@ -69,17 +69,33 @@ def save_classification_report(y_true, y_pred, class_names):
 
 def save_confusion_matrix(y_true, y_pred, class_names):
 
-    cm = confusion_matrix(y_true,y_pred)
+    cm = confusion_matrix(
+        y_true,
+        y_pred
+    )
 
     disp = ConfusionMatrixDisplay(
         confusion_matrix=cm,
         display_labels=class_names
     )
 
-    fig, ax = plt.subplots(figsize=(7,7))
+    fig, ax = plt.subplots(figsize=(8, 8))
 
-    disp.plot(ax=ax)
+    disp.plot(
+        ax=ax,
+        cmap="Blues",
+        colorbar=True
+    )
 
-    plt.savefig(CONFUSION_MATRIX_DIR / "confusion_matrix.png")
+    plt.title("CNN Confusion Matrix")
+
+    plt.tight_layout()
+
+    plt.savefig(
+        CONFUSION_MATRIX_DIR / "cnn_confusion_matrix.png",
+        dpi=300
+    )
 
     plt.close()
+
+    print("Confusion Matrix Saved Successfully.")

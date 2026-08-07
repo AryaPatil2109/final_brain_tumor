@@ -1,5 +1,6 @@
 import os
 import tempfile
+
 import streamlit as st
 
 from src.predict import BrainTumorPredictor
@@ -9,7 +10,6 @@ from components import (
     prediction_card,
     probability_table,
     cnn_metrics,
-    hybrid_placeholder
 )
 
 from morphology_component import show_morphology
@@ -23,9 +23,7 @@ MODEL_PATH = "models/cnn_model.keras"
 
 predictor = BrainTumorPredictor(MODEL_PATH)
 
-gradcam = GradCAM(
-    predictor.model
-)
+gradcam = GradCAM(predictor.model)
 
 
 # ======================================================
@@ -34,7 +32,7 @@ gradcam = GradCAM(
 
 def show_predict_page():
 
-    st.title("🧠 Brain Tumor Detection Dashboard")
+    st.title("🧠 Brain Tumor Dual Path Detection")
 
     st.markdown("---")
 
@@ -44,14 +42,12 @@ def show_predict_page():
     )
 
     if uploaded_file is None:
-
         st.info("Please upload a Brain MRI image.")
-
         return
 
-    # =====================================================
+    # ==================================================
     # Save Uploaded Image
-    # =====================================================
+    # ==================================================
 
     with tempfile.NamedTemporaryFile(
         delete=False,
@@ -59,104 +55,161 @@ def show_predict_page():
     ) as tmp:
 
         tmp.write(uploaded_file.getbuffer())
-
         image_path = tmp.name
 
-    # =====================================================
-    # CNN Prediction
-    # =====================================================
+    # ==================================================
+    # Prediction
+    # ==================================================
 
     result = predictor.predict(image_path)
 
-    # =====================================================
-    # Original MRI + Prediction
-    # =====================================================
+    # ==================================================
+    # Invalid Image
+    # ==================================================
 
-    col1, col2 = st.columns(2)
+    if not result["valid_brain"]:
 
-    with col1:
-
-        st.subheader("Original MRI")
+        st.subheader("Uploaded Image")
 
         st.image(
             image_path,
-            use_container_width=True
+            width=350
         )
 
-    with col2:
+        st.error("❌ Invalid Image")
+
+        st.warning(result["message"])
+
+        st.write(f"Distance : {result['distance']}")
+
+        st.write(f"Threshold : {result['threshold']}")
+
+        st.info(
+            "Please upload a valid Brain MRI image."
+        )
+
+        if os.path.exists(image_path):
+            os.remove(image_path)
+
+        return
+
+    # ==================================================
+    # Uploaded MRI
+    # ==================================================
+
+    st.subheader("Uploaded MRI Image")
+
+    st.image(
+        image_path,
+        width=350
+    )
+
+    st.markdown("---")
+
+    # ==================================================
+    # Module Selection
+    # ==================================================
+
+    analysis_mode = st.selectbox(
+        "Select Analysis Module",
+        [
+            "CNN Output",
+            "Morphology Output",
+            "Hybrid Output"
+        ]
+    )
+
+    st.markdown("---")
+
+    # ==================================================
+    # CNN OUTPUT
+    # ==================================================
+
+    if analysis_mode == "CNN Output":
+
+        st.header("CNN Analysis")
 
         prediction_card(
             result["prediction"],
             result["confidence"]
         )
 
-    st.markdown("---")
+        st.markdown("---")
 
-    # =====================================================
-    # Prediction Probabilities
-    # =====================================================
+        probability_table(
+            result["probabilities"]
+        )
 
-    probability_table(
-        result["probabilities"]
-    )
+        st.markdown("---")
 
-    st.markdown("---")
+        st.subheader("Grad-CAM Heatmap")
 
-    # =====================================================
-    # Grad-CAM
-    # =====================================================
+        heatmap = gradcam.create_gradcam(
+            image_path
+        )
 
-    st.subheader("Grad-CAM Heatmap")
+        st.image(
+            heatmap,
+            use_container_width=True
+        )
 
-    heatmap = gradcam.create_gradcam(
-        image_path
-    )
+        st.markdown("---")
 
-    st.image(
-        heatmap,
-        caption="Grad-CAM Heatmap",
-        use_container_width=True
-    )
+        cnn_metrics()
 
-    st.markdown("---")
+    # ==================================================
+    # MORPHOLOGY
+    # ==================================================
 
-    # =====================================================
-    # CNN Metrics
-    # =====================================================
+    elif analysis_mode == "Morphology Output":
 
-    cnn_metrics()
+        st.header("Morphological Analysis")
 
-    st.markdown("---")
+        show_morphology(image_path)
 
-    # =====================================================
-    # Morphology Analysis
-    # =====================================================
+    # ==================================================
+    # HYBRID
+    # ==================================================
 
-    show_morphology(image_path)
+    else:
 
-    st.markdown("---")
+        st.header("Hybrid Model")
 
-    # =====================================================
-    # Hybrid Prediction
-    # =====================================================
+        st.info(
+            "Hybrid model training is still in progress."
+        )
 
-    hybrid_placeholder()
+        st.metric(
+            "Current CNN Prediction",
+            result["prediction"]
+        )
 
-    st.markdown("---")
+        st.metric(
+            "Confidence",
+            f"{result['confidence']}%"
+        )
 
-    # =====================================================
-    # Final Diagnosis
-    # =====================================================
+        st.warning(
+            "Hybrid prediction will be available after Hybrid model training."
+        )
 
-    st.subheader("Final Diagnosis")
+        st.markdown("---")
 
-    st.info(
-        "Hybrid Model training is pending. Final diagnosis will be displayed after the Hybrid Model is completed."
-    )
+        st.subheader("Final Diagnosis")
 
-    # =====================================================
+        st.success(
+            f"""
+### Prediction : {result['prediction'].upper()}
+
+**Confidence : {result['confidence']}%**
+
+**Current Decision Source : CNN Model**
+"""
+        )
+
+    # ==================================================
     # Cleanup
-    # =====================================================
+    # ==================================================
 
     if os.path.exists(image_path):
         os.remove(image_path)

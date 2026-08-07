@@ -8,7 +8,7 @@ class CNNFeatureExtractor:
 
         self.model = Model(
             inputs=model.input,
-            outputs=model.layers[-2].output
+            outputs=model.get_layer("global_average_pooling2d").output
         )
 
     def extract(self, image):

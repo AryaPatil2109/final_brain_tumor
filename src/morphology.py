@@ -12,14 +12,21 @@ class MorphologyAnalyzer:
         Convert RGB image to grayscale and apply Gaussian blur.
         """
         gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+
+        blur = cv2.GaussianBlur(
+            gray,
+            (5, 5),
+            0
+        )
+
         return blur
 
     def segment(self, image):
         """
-        Segment the tumor region using Otsu thresholding
-        followed by morphological opening.
+        Segment tumor using
+        Threshold → Opening → Closing
         """
+
         blur = self.preprocess(image)
 
         _, thresh = cv2.threshold(
@@ -31,6 +38,7 @@ class MorphologyAnalyzer:
 
         kernel = np.ones((3, 3), np.uint8)
 
+        # Morphological Opening
         opening = cv2.morphologyEx(
             thresh,
             cv2.MORPH_OPEN,
@@ -38,12 +46,38 @@ class MorphologyAnalyzer:
             iterations=2
         )
 
-        return opening
+        # Morphological Closing
+        closing = cv2.morphologyEx(
+            opening,
+            cv2.MORPH_CLOSE,
+            kernel,
+            iterations=2
+        )
+
+        return closing
+
+    def gradient(self, image):
+        """
+        Morphological Gradient
+        """
+
+        blur = self.preprocess(image)
+
+        kernel = np.ones((3, 3), np.uint8)
+
+        gradient = cv2.morphologyEx(
+            blur,
+            cv2.MORPH_GRADIENT,
+            kernel
+        )
+
+        return gradient
 
     def contours(self, mask):
         """
         Find external contours.
         """
+
         contours, _ = cv2.findContours(
             mask,
             cv2.RETR_EXTERNAL,
@@ -54,46 +88,59 @@ class MorphologyAnalyzer:
 
     def contour_count(self, mask):
         """
-        Number of detected tumor contours.
+        Number of detected contours.
         """
+
         return len(self.contours(mask))
 
     def tumor_area(self, mask):
         """
-        Total segmented tumor area (pixels).
+        Total segmented tumor area.
         """
+
         return int(np.sum(mask > 0))
 
     def largest_contour_area(self, mask):
         """
-        Area of the largest contour.
+        Area of largest contour.
         """
+
         contours = self.contours(mask)
 
         if len(contours) == 0:
             return 0
 
-        return max(cv2.contourArea(c) for c in contours)
+        return max(
+            cv2.contourArea(c)
+            for c in contours
+        )
 
     def bounding_box(self, mask):
         """
         Bounding box around largest contour.
         """
+
         contours = self.contours(mask)
 
         if len(contours) == 0:
             return None
 
-        largest = max(contours, key=cv2.contourArea)
+        largest = max(
+            contours,
+            key=cv2.contourArea
+        )
 
-        x, y, w, h = cv2.boundingRect(largest)
+        x, y, w, h = cv2.boundingRect(
+            largest
+        )
 
         return (x, y, w, h)
 
     def draw_contours(self, image):
         """
-        Draw contours on the original image.
+        Draw contours on original image.
         """
+
         mask = self.segment(image)
 
         contours = self.contours(mask)
@@ -112,20 +159,24 @@ class MorphologyAnalyzer:
 
     def extract_features(self, image):
         """
-        Extract morphological features for the Hybrid Model.
+        Extract morphology features.
         """
 
         mask = self.segment(image)
 
         features = {
 
-            "tumor_area": self.tumor_area(mask),
+            "tumor_area":
+                self.tumor_area(mask),
 
-            "largest_contour_area": self.largest_contour_area(mask),
+            "largest_contour_area":
+                self.largest_contour_area(mask),
 
-            "contour_count": self.contour_count(mask),
+            "contour_count":
+                self.contour_count(mask),
 
-            "bounding_box": self.bounding_box(mask)
+            "bounding_box":
+                self.bounding_box(mask)
 
         }
 

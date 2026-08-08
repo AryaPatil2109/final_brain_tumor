@@ -9,17 +9,21 @@ from src.morphology import MorphologyAnalyzer
 
 
 # ==========================================================
-# FEATURE DATASET GENERATOR
+# TEST FEATURE DATASET GENERATOR
 # ==========================================================
 
-class FeatureDatasetGenerator:
+class TestFeatureGenerator:
 
     def __init__(self, model_path):
 
         print()
         print("=" * 60)
-        print("Loading CNN model...")
+        print("Loading Fine-Tuned CNN model...")
         print("=" * 60)
+
+        # --------------------------------------------------
+        # Check model exists
+        # --------------------------------------------------
 
         if not os.path.exists(model_path):
 
@@ -27,32 +31,44 @@ class FeatureDatasetGenerator:
                 f"CNN model not found: {model_path}"
             )
 
+        # --------------------------------------------------
+        # Load fine-tuned CNN
+        # --------------------------------------------------
+
         self.model = load_model(
             model_path
         )
+
+        # --------------------------------------------------
+        # CNN feature extractor
+        # --------------------------------------------------
 
         self.cnn = CNNFeatureExtractor(
             self.model
         )
 
+        # --------------------------------------------------
+        # Morphology analyzer
+        # --------------------------------------------------
+
         self.morphology = MorphologyAnalyzer()
 
         print(
-            "CNN model loaded successfully."
+            "Fine-Tuned CNN model loaded successfully."
         )
 
         print()
 
 
     # ======================================================
-    # PROCESS ONE IMAGE
+    # PROCESS IMAGE
     # ======================================================
 
     def process_image(self, image_path):
 
-        # ==================================================
+        # --------------------------------------------------
         # Read image
-        # ==================================================
+        # --------------------------------------------------
 
         image = cv2.imread(
             image_path
@@ -64,27 +80,27 @@ class FeatureDatasetGenerator:
                 f"Unable to read image: {image_path}"
             )
 
-        # ==================================================
-        # Convert BGR → RGB
-        # ==================================================
+        # --------------------------------------------------
+        # BGR → RGB
+        # --------------------------------------------------
 
         image = cv2.cvtColor(
             image,
             cv2.COLOR_BGR2RGB
         )
 
-        # ==================================================
-        # Resize image for CNN
-        # ==================================================
+        # --------------------------------------------------
+        # Resize for CNN
+        # --------------------------------------------------
 
         resized = cv2.resize(
             image,
             (224, 224)
         )
 
-        # ==================================================
-        # Normalize image
-        # ==================================================
+        # --------------------------------------------------
+        # Normalize CNN input
+        # --------------------------------------------------
 
         cnn_input = (
             resized.astype("float32") / 255.0
@@ -95,17 +111,17 @@ class FeatureDatasetGenerator:
             axis=0
         )
 
-        # ==================================================
-        # CNN FEATURE EXTRACTION
-        # ==================================================
+        # --------------------------------------------------
+        # CNN feature extraction
+        # --------------------------------------------------
 
         cnn_features = self.cnn.extract(
             cnn_input
         )
 
-        # ==================================================
-        # MORPHOLOGY FEATURE EXTRACTION
-        # ==================================================
+        # --------------------------------------------------
+        # Morphology feature extraction
+        # --------------------------------------------------
 
         morphology = (
             self.morphology.extract_features(
@@ -113,9 +129,9 @@ class FeatureDatasetGenerator:
             )
         )
 
-        # ==================================================
-        # Bounding Box
-        # ==================================================
+        # --------------------------------------------------
+        # Bounding box
+        # --------------------------------------------------
 
         bounding_box = morphology[
             "bounding_box"
@@ -132,10 +148,10 @@ class FeatureDatasetGenerator:
 
             x, y, w, h = bounding_box
 
-        # ==================================================
-        # Convert morphology dictionary
-        # into numeric feature vector
-        # ==================================================
+        # --------------------------------------------------
+        # Convert morphology features
+        # into numeric vector
+        # --------------------------------------------------
 
         morphology_features = np.array(
             [
@@ -157,7 +173,7 @@ class FeatureDatasetGenerator:
 
 
 # ==========================================================
-# MAIN FEATURE DATASET GENERATION
+# MAIN
 # ==========================================================
 
 def main():
@@ -167,37 +183,46 @@ def main():
     # ======================================================
 
     # IMPORTANT:
-    # This is your fine-tuned CNN model.
-    #
-    # Actual filename in your models folder:
-    # cnn_model_finetuned (2).keras
-    # ======================================================
+    # Use the SAME fine-tuned CNN that will be used
+    # for the Hybrid V2 training features.
 
     MODEL_PATH = (
         "models/cnn_model_finetuned (2).keras"
     )
 
-    # ======================================================
-    # TRAINING DATASET
-    # ======================================================
+    # ------------------------------------------------------
+    # Testing dataset
+    # ------------------------------------------------------
 
     DATASET_DIR = (
-        "dataset/Training"
+        "dataset/Testing"
     )
 
-    # ======================================================
-    # HYBRID V2 OUTPUT DIRECTORIES
+    # ------------------------------------------------------
+    # New output folders
     #
-    # We keep these separate from the old features.
-    # ======================================================
+    # These DO NOT overwrite your old Hybrid V1 features.
+    # ------------------------------------------------------
 
     CNN_OUTPUT_DIR = (
-        "features/cnn_features_finetuned"
+        "features/test_cnn_features_finetuned"
     )
 
     MORPH_OUTPUT_DIR = (
-        "features/morphology_features_finetuned"
+        "features/test_morphology_features_finetuned"
     )
+
+
+    # ======================================================
+    # CHECK DATASET
+    # ======================================================
+
+    if not os.path.exists(DATASET_DIR):
+
+        raise FileNotFoundError(
+            f"Testing dataset not found: {DATASET_DIR}"
+        )
+
 
     # ======================================================
     # CREATE OUTPUT DIRECTORIES
@@ -213,6 +238,7 @@ def main():
         exist_ok=True
     )
 
+
     # ======================================================
     # CLASS NAMES
     # ======================================================
@@ -224,65 +250,15 @@ def main():
         "pituitary"
     ]
 
-    # ======================================================
-    # CHECK MODEL
-    # ======================================================
-
-    if not os.path.exists(
-        MODEL_PATH
-    ):
-
-        raise FileNotFoundError(
-            f"CNN model not found: {MODEL_PATH}"
-        )
-
-    # ======================================================
-    # CHECK DATASET
-    # ======================================================
-
-    if not os.path.exists(
-        DATASET_DIR
-    ):
-
-        raise FileNotFoundError(
-            f"Training dataset not found: {DATASET_DIR}"
-        )
-
-    # ======================================================
-    # START
-    # ======================================================
-
-    print()
-    print("=" * 60)
-    print("HYBRID V2 FEATURE DATASET GENERATION")
-    print("=" * 60)
-
-    print()
-    print("CNN Model:")
-    print(MODEL_PATH)
-
-    print()
-    print("Training Dataset:")
-    print(DATASET_DIR)
-
-    print()
-    print("CNN Feature Output:")
-    print(CNN_OUTPUT_DIR)
-
-    print()
-    print("Morphology Feature Output:")
-    print(MORPH_OUTPUT_DIR)
-
-    print()
-    print("=" * 60)
 
     # ======================================================
     # INITIALIZE GENERATOR
     # ======================================================
 
-    generator = FeatureDatasetGenerator(
+    generator = TestFeatureGenerator(
         MODEL_PATH
     )
+
 
     # ======================================================
     # STORAGE
@@ -296,44 +272,38 @@ def main():
 
     all_image_paths = []
 
+
     # ======================================================
-    # PROCESS EVERY CLASS
+    # PROCESS EACH CLASS
     # ======================================================
 
     for class_index, class_name in enumerate(
         class_names
     ):
 
-        # ==================================================
-        # CLASS DIRECTORY
-        # ==================================================
-
         class_dir = os.path.join(
             DATASET_DIR,
             class_name
         )
 
-        # ==================================================
-        # CHECK CLASS DIRECTORY
-        # ==================================================
+        # --------------------------------------------------
+        # Check class folder
+        # --------------------------------------------------
 
-        if not os.path.exists(
-            class_dir
-        ):
+        if not os.path.exists(class_dir):
 
             raise FileNotFoundError(
                 f"Dataset folder not found: {class_dir}"
             )
 
-        # ==================================================
-        # FIND IMAGE FILES
-        # ==================================================
+
+        # --------------------------------------------------
+        # Find images
+        # --------------------------------------------------
 
         image_files = [
             f
-            for f in os.listdir(
-                class_dir
-            )
+            for f in os.listdir(class_dir)
             if f.lower().endswith(
                 (
                     ".jpg",
@@ -345,15 +315,16 @@ def main():
 
         image_files.sort()
 
-        # ==================================================
-        # DISPLAY CLASS INFORMATION
-        # ==================================================
+
+        # --------------------------------------------------
+        # Processing information
+        # --------------------------------------------------
 
         print()
         print("=" * 60)
 
         print(
-            f"Processing {class_name}"
+            f"Processing TEST class: {class_name}"
         )
 
         print(
@@ -366,9 +337,10 @@ def main():
 
         print("=" * 60)
 
-        # ==================================================
-        # PROCESS IMAGES
-        # ==================================================
+
+        # --------------------------------------------------
+        # Process images
+        # --------------------------------------------------
 
         for count, filename in enumerate(
             image_files,
@@ -389,40 +361,45 @@ def main():
                     image_path
                 )
 
+
                 # ------------------------------------------
-                # CNN FEATURES
+                # Store CNN features
                 # ------------------------------------------
 
                 all_cnn_features.append(
                     cnn_features
                 )
 
+
                 # ------------------------------------------
-                # MORPHOLOGY FEATURES
+                # Store morphology features
                 # ------------------------------------------
 
                 all_morphology_features.append(
                     morphology_features
                 )
 
+
                 # ------------------------------------------
-                # LABEL
+                # Store label
                 # ------------------------------------------
 
                 all_labels.append(
                     class_index
                 )
 
+
                 # ------------------------------------------
-                # IMAGE PATH
+                # Store image path
                 # ------------------------------------------
 
                 all_image_paths.append(
                     image_path
                 )
 
+
                 # ------------------------------------------
-                # PROGRESS
+                # Progress
                 # ------------------------------------------
 
                 if count % 100 == 0:
@@ -431,6 +408,7 @@ def main():
                         f"Processed "
                         f"{count}/{len(image_files)}"
                     )
+
 
             except Exception as e:
 
@@ -442,6 +420,7 @@ def main():
                 print(
                     f"Reason: {e}"
                 )
+
 
     # ======================================================
     # CONVERT TO NUMPY ARRAYS
@@ -466,45 +445,41 @@ def main():
         all_image_paths
     )
 
+
     # ======================================================
     # PRINT FINAL SHAPES
     # ======================================================
 
     print()
     print("=" * 60)
-    print("HYBRID V2 FEATURE DATASET SUMMARY")
-    print("=" * 60)
-
-    print()
 
     print(
-        "CNN Feature Shape:",
+        "Test CNN Feature Shape:",
         cnn_features.shape
     )
 
     print(
-        "Morphology Feature Shape:",
+        "Test Morphology Feature Shape:",
         morphology_features.shape
     )
 
     print(
-        "Labels Shape:",
+        "Test Labels Shape:",
         labels.shape
     )
 
     print(
-        "Image Paths Shape:",
+        "Test Image Paths Shape:",
         image_paths.shape
     )
 
-    print()
-
     print(
-        "Total images processed:",
+        "Total test images:",
         len(labels)
     )
 
     print("=" * 60)
+
 
     # ======================================================
     # SAVE CNN FEATURES
@@ -534,6 +509,7 @@ def main():
         image_paths
     )
 
+
     # ======================================================
     # SAVE MORPHOLOGY FEATURES
     # ======================================================
@@ -562,6 +538,7 @@ def main():
         image_paths
     )
 
+
     # ======================================================
     # FINAL MESSAGE
     # ======================================================
@@ -570,7 +547,7 @@ def main():
     print("=" * 60)
 
     print(
-        "HYBRID V2 FEATURE DATASET GENERATED SUCCESSFULLY"
+        "TEST FEATURE DATASET GENERATED SUCCESSFULLY"
     )
 
     print("=" * 60)
@@ -578,7 +555,7 @@ def main():
     print()
 
     print(
-        "CNN features saved to:"
+        "Fine-tuned CNN test features saved to:"
     )
 
     print(
@@ -588,7 +565,7 @@ def main():
     print()
 
     print(
-        "Morphology features saved to:"
+        "Morphology test features saved to:"
     )
 
     print(
@@ -598,7 +575,7 @@ def main():
     print()
 
     print(
-        f"Total images processed: {len(labels)}"
+        f"Total test images processed: {len(labels)}"
     )
 
     print()

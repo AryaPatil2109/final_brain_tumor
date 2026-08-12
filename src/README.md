@@ -1,5 +1,7 @@
 # 🧠 Brain Tumor Dual Path Detection
 
+
+
 An AI-powered Brain MRI classification system based on a **Dual-Path Deep Learning Architecture** that combines deep visual features extracted from MRI images with morphological image features.
 
 The system is designed to classify Brain MRI images into four categories:

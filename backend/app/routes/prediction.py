@@ -1,6 +1,5 @@
 import os
 import uuid
-
 from pathlib import Path
 
 from fastapi import APIRouter
@@ -36,9 +35,7 @@ ml_service = BrainTumorMLService()
 # DIRECTORIES
 # =====================================================
 
-UPLOAD_DIR = Path(
-    "backend/uploads"
-)
+UPLOAD_DIR = Path("backend/uploads")
 
 GRADCAM_DIR = Path(
     "backend/static/gradcam"
@@ -68,18 +65,49 @@ ALLOWED_EXTENSIONS = {
 
 
 # =====================================================
+# HELPER
+# =====================================================
+
+def prediction_to_dict(
+    prediction: Prediction,
+) -> dict:
+    """
+    Convert a Prediction database object
+    into a JSON-friendly dictionary.
+    """
+
+    return {
+        "id": prediction.id,
+
+        "user_id": prediction.user_id,
+
+        "prediction": prediction.prediction,
+
+        "confidence": prediction.confidence,
+
+        "image_url": prediction.image_path,
+
+        "gradcam_url": prediction.gradcam_path,
+
+        "created_at": prediction.created_at,
+    }
+
+
+# =====================================================
 # PREDICTION
 # =====================================================
 
 @router.post("/predict")
 async def predict_mri(
     file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        get_current_user
+    ),
     db: Session = Depends(get_db),
 ):
     """
     Upload an MRI image, run the complete ML pipeline,
-    generate Grad-CAM and save the prediction to PostgreSQL.
+    generate Grad-CAM and save the prediction.
     """
 
     # -------------------------------------------------
@@ -87,16 +115,20 @@ async def predict_mri(
     # -------------------------------------------------
 
     if not file.filename:
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="No file was uploaded.",
         )
 
+
     extension = Path(
         file.filename
     ).suffix.lower()
 
+
     if extension not in ALLOWED_EXTENSIONS:
+
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
@@ -104,6 +136,7 @@ async def predict_mri(
                 "MRI images are supported."
             ),
         )
+
 
     # -------------------------------------------------
     # 2. Generate unique filename
@@ -119,11 +152,13 @@ async def predict_mri(
         UPLOAD_DIR / image_filename
     )
 
+
     # -------------------------------------------------
     # 3. Save uploaded MRI
     # -------------------------------------------------
 
     try:
+
         with open(
             image_path,
             "wb",
@@ -143,12 +178,15 @@ async def predict_mri(
     except Exception as exc:
 
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=(
+                status.HTTP_500_INTERNAL_SERVER_ERROR
+            ),
             detail=(
                 "Failed to save uploaded image: "
                 f"{exc}"
             ),
         )
+
 
     # -------------------------------------------------
     # 4. Run ML prediction
@@ -163,15 +201,19 @@ async def predict_mri(
     except Exception as exc:
 
         if image_path.exists():
+
             os.remove(image_path)
 
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=(
+                status.HTTP_500_INTERNAL_SERVER_ERROR
+            ),
             detail=(
                 "Prediction failed: "
                 f"{exc}"
             ),
         )
+
 
     # -------------------------------------------------
     # 5. Original image URL
@@ -181,7 +223,6 @@ async def predict_mri(
         f"/uploads/{image_filename}"
     )
 
-    result["image_url"] = image_url
 
     # -------------------------------------------------
     # 6. Invalid/non-brain image
@@ -194,8 +235,44 @@ async def predict_mri(
 
         return {
             "success": True,
-            **result,
+
+            "prediction_id": None,
+
+            "user_id": current_user.id,
+
+            "prediction": result.get(
+                "prediction"
+            ),
+
+            "confidence": result.get(
+                "confidence"
+            ),
+
+            "probabilities": result.get(
+                "probabilities"
+            ),
+
+            "cnn": result.get(
+                "cnn"
+            ),
+
+            "validation": result.get(
+                "validation"
+            ),
+
+            "morphology": result.get(
+                "morphology"
+            ),
+
+            "image_url": image_url,
+
+            "gradcam_url": None,
+
+            "gradcam_error": None,
+
+            "valid_brain": False,
         }
+
 
     # -------------------------------------------------
     # 7. Generate Grad-CAM
@@ -211,6 +288,7 @@ async def predict_mri(
 
     gradcam_url = None
     gradcam_error = None
+
 
     try:
 
@@ -228,6 +306,7 @@ async def predict_mri(
 
         gradcam_error = str(exc)
 
+
     # -------------------------------------------------
     # 8. Save prediction to PostgreSQL
     # -------------------------------------------------
@@ -243,6 +322,7 @@ async def predict_mri(
             "confidence",
             0.0,
         )
+
 
         prediction_record = Prediction(
             user_id=current_user.id,
@@ -260,6 +340,7 @@ async def predict_mri(
             gradcam_path=gradcam_url,
         )
 
+
         db.add(
             prediction_record
         )
@@ -275,13 +356,16 @@ async def predict_mri(
         db.rollback()
 
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            status_code=(
+                status.HTTP_500_INTERNAL_SERVER_ERROR
+            ),
             detail=(
                 "Prediction was completed, "
                 "but saving the prediction "
                 f"to the database failed: {exc}"
             ),
         )
+
 
     # -------------------------------------------------
     # 9. Final response
@@ -327,6 +411,11 @@ async def predict_mri(
         "gradcam_url": gradcam_url,
 
         "gradcam_error": gradcam_error,
+
+        "valid_brain": result.get(
+            "valid_brain",
+            True,
+        ),
     }
 
 
@@ -336,7 +425,9 @@ async def predict_mri(
 
 @router.get("/predictions/history")
 def get_prediction_history(
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(
+        get_current_user
+    ),
     db: Session = Depends(get_db),
 ):
     """
@@ -356,19 +447,16 @@ def get_prediction_history(
         .all()
     )
 
+
     return {
         "success": True,
+
         "count": len(predictions),
+
         "predictions": [
-            {
-                "id": prediction.id,
-                "user_id": prediction.user_id,
-                "prediction": prediction.prediction,
-                "confidence": prediction.confidence,
-                "image_url": prediction.image_path,
-                "gradcam_url": prediction.gradcam_path,
-                "created_at": prediction.created_at,
-            }
+            prediction_to_dict(
+                prediction
+            )
             for prediction in predictions
         ],
     }
@@ -378,10 +466,16 @@ def get_prediction_history(
 # SINGLE PREDICTION
 # =====================================================
 
-@router.get("/predictions/{prediction_id}")
+@router.get(
+    "/predictions/{prediction_id}"
+)
 def get_prediction(
     prediction_id: int,
-    current_user: User = Depends(get_current_user),
+
+    current_user: User = Depends(
+        get_current_user
+    ),
+
     db: Session = Depends(get_db),
 ):
     """
@@ -393,28 +487,28 @@ def get_prediction(
         db.query(Prediction)
         .filter(
             Prediction.id == prediction_id,
-            Prediction.user_id == current_user.id,
+
+            Prediction.user_id
+            == current_user.id,
         )
         .first()
     )
 
+
     if not prediction:
 
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
+            status_code=(
+                status.HTTP_404_NOT_FOUND
+            ),
             detail="Prediction not found.",
         )
+
 
     return {
         "success": True,
 
-        "prediction": {
-            "id": prediction.id,
-            "user_id": prediction.user_id,
-            "prediction": prediction.prediction,
-            "confidence": prediction.confidence,
-            "image_url": prediction.image_path,
-            "gradcam_url": prediction.gradcam_path,
-            "created_at": prediction.created_at,
-        },
+        "prediction": prediction_to_dict(
+            prediction
+        ),
     }

@@ -32,3 +32,8 @@ Thumbs.db
 
 # Reports
 Report.docx
+
+# Environment / Secrets
+.env
+*.env
+backend/.env

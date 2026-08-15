@@ -35,19 +35,19 @@ app.add_middleware(
     CORSMiddleware,
 
     allow_origins=[
+        # Local development
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+
+        # Vercel production frontend
+        "https://brain-tumor-dual-path.vercel.app",
     ],
 
     allow_credentials=True,
 
-    allow_methods=[
-        "*"
-    ],
+    allow_methods=["*"],
 
-    allow_headers=[
-        "*"
-    ],
+    allow_headers=["*"],
 )
 
 
@@ -79,17 +79,9 @@ app.mount(
 # API ROUTES
 # =====================================================
 
-app.include_router(
-    auth_router
-)
-
-app.include_router(
-    prediction_router
-)
-
-app.include_router(
-    tumor_router
-)
+app.include_router(auth_router)
+app.include_router(prediction_router)
+app.include_router(tumor_router)
 
 
 # =====================================================

@@ -1,3 +1,12 @@
+import os
+
+# =====================================================
+# DISABLE GPU / CUDA FOR RENDER
+# =====================================================
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles

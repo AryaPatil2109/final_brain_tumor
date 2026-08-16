@@ -31,18 +31,31 @@ app = FastAPI(
 # CORS
 # =====================================================
 
+# =====================================================
+# CORS
+# =====================================================
+
 app.add_middleware(
     CORSMiddleware,
+
     allow_origins=[
+        # Local development
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+
+        # Vercel production frontend
         "https://brain-tumor-dual-path.vercel.app",
+
+        # Render production frontend
+        "https://brain-tumor-dual-path-frontend.onrender.com",
     ],
+
     allow_credentials=True,
+
     allow_methods=["*"],
+
     allow_headers=["*"],
 )
-
 
 # =====================================================
 # STATIC FILES

@@ -17,7 +17,7 @@ PyJWT==2.10.1
 
 # ML / Deep Learning (CPU only for Render)
 tensorflow-cpu==2.16.2
-keras==2.16.0
+keras==3.5.0
 scikit-learn==1.5.2
 numpy==1.26.4
 scipy==1.14.1

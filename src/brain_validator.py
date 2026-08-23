@@ -3,7 +3,7 @@ import numpy as np
 
 from scipy.spatial.distance import cosine
 
-from tensorflow.keras.models import load_model
+from src.model_loader import load_keras_model
 from tensorflow.keras.preprocessing import image
 
 from src.feature_extractor import CNNFeatureExtractor
@@ -17,7 +17,7 @@ class BrainValidator:
         centers_path="models/brain_centers.pkl"
     ):
 
-        self.cnn = load_model(model_path)
+        self.cnn = load_keras_model(model_path)
 
         self.extractor = CNNFeatureExtractor(self.cnn)
 

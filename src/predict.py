@@ -1,7 +1,7 @@
 import os
 import numpy as np
 
-from tensorflow.keras.models import load_model
+from src.model_loader import load_keras_model
 from tensorflow.keras.preprocessing import image
 
 from src.brain_validator import BrainValidator
@@ -16,7 +16,7 @@ class BrainTumorPredictor:
                 f"Model not found: {model_path}"
             )
 
-        self.model = load_model(model_path)
+        self.model = load_keras_model(model_path)
 
         self.validator = BrainValidator()
 

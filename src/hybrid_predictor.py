@@ -3,7 +3,7 @@ import cv2
 import joblib
 import numpy as np
 
-from tensorflow.keras.models import load_model
+from src.model_loader import load_keras_model
 
 from src.feature_extractor import CNNFeatureExtractor
 from src.morphology import MorphologyAnalyzer
@@ -49,9 +49,7 @@ class HybridPredictor:
 
         print("Loading Hybrid V2 model...")
 
-        self.hybrid_model = load_model(
-            hybrid_model_path
-        )
+        self.hybrid_model = load_keras_model(hybrid_model_path)
 
         print("Hybrid V2 model loaded.")
 
@@ -61,9 +59,7 @@ class HybridPredictor:
 
         print("Loading fine-tuned CNN model...")
 
-        self.cnn_model = load_model(
-            cnn_model_path
-        )
+        self.cnn_model = load_keras_model(cnn_model_path)
 
         print("Fine-tuned CNN loaded.")
 

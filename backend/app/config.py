@@ -68,3 +68,14 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(
         "60",
     )
 )
+
+
+# =====================================================
+# SMTP Settings for Email
+# =====================================================
+
+SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USERNAME = os.getenv("SMTP_USERNAME")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://finalbraintumo.vercel.app")

@@ -23,6 +23,7 @@ from backend.app.security import hash_password
 from backend.app.security import verify_password
 from backend.app.security import create_reset_token
 from backend.app.security import decode_reset_token
+from backend.app.services.email import send_reset_email
 
 
 router = APIRouter(
@@ -315,9 +316,17 @@ def forgot_password(
     # Create password reset token
     reset_token = create_reset_token(user.id)
 
+    # Send reset email
+    email_sent = send_reset_email(user.email, reset_token)
+    if not email_sent:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to send password reset email. Please try again later or verify SMTP settings.",
+        )
+
     return ForgotPasswordResponse(
-        message="A password reset token has been generated successfully.",
-        reset_token=reset_token,
+        message="A password reset link has been sent to your email address.",
+        reset_token=None,  # Reset token is sent via email, not returned in response body
     )
 
 

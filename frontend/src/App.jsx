@@ -20,6 +20,7 @@ import History from "./pages/History";
 import About from "./pages/About";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
+import ResetPassword from "./pages/ResetPassword";
 
 /* =========================================================
    GLOBAL BRAIN NETWORK BACKGROUND
@@ -409,6 +410,16 @@ function AppRoutes() {
           element={
             <PageTransition>
               <SignUp />
+            </PageTransition>
+          }
+        />
+
+        {/* Reset Password */}
+        <Route
+          path="/reset-password"
+          element={
+            <PageTransition>
+              <ResetPassword />
             </PageTransition>
           }
         />

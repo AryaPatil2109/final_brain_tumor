@@ -1,38 +1,31 @@
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import logging
+import json
+from urllib.request import Request, urlopen
+from urllib.error import URLError, HTTPError
 from backend.app.config import (
-    SMTP_HOST,
-    SMTP_PORT,
-    SMTP_USERNAME,
-    SMTP_PASSWORD,
     FRONTEND_URL,
 )
+import os
 
 logger = logging.getLogger(__name__)
 
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+
 def send_reset_email(to_email: str, token: str) -> tuple[bool, str]:
     """
-    Send a password reset email using SMTP.
+    Send a password reset email using Resend HTTP API.
     Returns (success: bool, error_message: str).
     """
-    # Verify if SMTP is configured
-    if not SMTP_USERNAME or not SMTP_PASSWORD:
+    if not RESEND_API_KEY:
         logger.warning(
-            "SMTP credentials not configured. Cannot send email. "
+            "RESEND_API_KEY not configured. Cannot send email. "
             "Simulated reset token: %s", token
         )
-        return False, "SMTP credentials (SMTP_USERNAME / SMTP_PASSWORD) are not configured on the server."
+        return False, "RESEND_API_KEY is not configured on the server."
 
     reset_link = f"{FRONTEND_URL}/reset-password?token={token}"
 
-    message = MIMEMultipart("alternative")
-    message["Subject"] = "Reset Your Password - NeuroScan AI"
-    message["From"] = SMTP_USERNAME
-    message["To"] = to_email
-
-    # HTML Body with a beautiful premium dark theme styling matching NeuroScan AI!
+    # HTML Body with premium dark theme styling matching NeuroScan AI
     html = f"""
     <html>
       <body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #061624; color: #fff; padding: 2rem; margin: 0;">
@@ -69,22 +62,35 @@ def send_reset_email(to_email: str, token: str) -> tuple[bool, str]:
     </html>
     """
 
-    part = MIMEText(html, "html")
-    message.attach(part)
+    payload = json.dumps({
+        "from": "NeuroScan AI <onboarding@resend.dev>",
+        "to": [to_email],
+        "subject": "Reset Your Password - NeuroScan AI",
+        "html": html,
+    }).encode("utf-8")
+
+    req = Request(
+        "https://api.resend.com/emails",
+        data=payload,
+        headers={
+            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Content-Type": "application/json",
+        },
+        method="POST",
+    )
 
     try:
-        # Use TLS connection for port 587
-        if SMTP_PORT == 587:
-            server = smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=10)
-            server.starttls()
-        else:
-            # Use SSL connection for port 465
-            server = smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=10)
-            
-        server.login(SMTP_USERNAME, SMTP_PASSWORD)
-        server.sendmail(SMTP_USERNAME, to_email, message.as_string())
-        server.quit()
-        return True, ""
+        with urlopen(req, timeout=10) as resp:
+            resp_body = resp.read().decode("utf-8")
+            logger.info("Resend API response: %s", resp_body)
+            return True, ""
+    except HTTPError as e:
+        body = e.read().decode("utf-8", errors="ignore")
+        logger.error("Resend HTTP error %s: %s", e.code, body)
+        return False, f"Resend API error ({e.code}): {body}"
+    except URLError as e:
+        logger.error("Resend URL error: %s", e.reason)
+        return False, f"Resend connection error: {e.reason}"
     except Exception as e:
-        logger.error("Failed to send SMTP email: %s", e)
+        logger.error("Failed to send email via Resend: %s", e)
         return False, str(e)

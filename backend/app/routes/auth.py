@@ -14,10 +14,15 @@ from backend.app.schemas import LoginRequest
 from backend.app.schemas import LoginResponse
 from backend.app.schemas import SignupRequest
 from backend.app.schemas import SignupResponse
+from backend.app.schemas import ForgotPasswordRequest
+from backend.app.schemas import ForgotPasswordResponse
+from backend.app.schemas import ResetPasswordRequest
 
 from backend.app.security import create_access_token
 from backend.app.security import hash_password
 from backend.app.security import verify_password
+from backend.app.security import create_reset_token
+from backend.app.security import decode_reset_token
 
 
 router = APIRouter(
@@ -273,4 +278,109 @@ def oauth2_login(
     return {
         "access_token": access_token,
         "token_type": "bearer",
+    }
+
+
+# =====================================================
+# PASSWORD RESET
+# =====================================================
+
+@router.post(
+    "/forgot-password",
+    response_model=ForgotPasswordResponse,
+)
+def forgot_password(
+    request: ForgotPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Generate a password reset token for the specified email.
+    """
+
+    user = (
+        db.query(User)
+        .filter(
+            User.email == request.email.lower()
+        )
+        .first()
+    )
+
+    if not user:
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No account associated with this email address was found.",
+        )
+
+    # Create password reset token
+    reset_token = create_reset_token(user.id)
+
+    return ForgotPasswordResponse(
+        message="A password reset token has been generated successfully.",
+        reset_token=reset_token,
+    )
+
+
+@router.post(
+    "/reset-password",
+)
+def reset_password(
+    request: ResetPasswordRequest,
+    db: Session = Depends(get_db),
+):
+    """
+    Reset password using a valid reset token.
+    """
+
+    payload = decode_reset_token(request.token)
+
+    if not payload:
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="The password reset link is invalid or has expired.",
+        )
+
+    user_id = payload.get("sub")
+
+    if not user_id:
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid token payload.",
+        )
+
+    try:
+
+        user_id = int(user_id)
+
+    except ValueError:
+
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid token payload format.",
+        )
+
+    user = (
+        db.query(User)
+        .filter(User.id == user_id)
+        .first()
+    )
+
+    if not user:
+
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found.",
+        )
+
+    # Hash and update password
+    user.password_hash = hash_password(
+        request.new_password
+    )
+
+    db.commit()
+
+    return {
+        "message": "Your password has been reset successfully."
     }

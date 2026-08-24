@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail,
   Lock,
@@ -24,6 +24,96 @@ export default function SignIn() {
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+
+  // Forgot / Reset Password states
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotStep, setForgotStep] = useState(1); // 1 = request reset token, 2 = reset password
+  const [resetToken, setResetToken] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotError, setForgotError] = useState("");
+  const [forgotSuccess, setForgotSuccess] = useState("");
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setForgotError("");
+    setForgotSuccess("");
+    if (!forgotEmail.trim()) {
+      setForgotError("Please enter your email address.");
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail.trim().toLowerCase() }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || "Something went wrong.");
+      }
+      setResetToken(data.reset_token);
+      setForgotSuccess("Simulated reset token generated successfully. Please enter your new password below.");
+      setForgotStep(2);
+    } catch (err) {
+      setForgotError(err.message || "Failed to request password reset.");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e) => {
+    e.preventDefault();
+    setForgotError("");
+    setForgotSuccess("");
+    if (!newPassword || !confirmPassword) {
+      setForgotError("Please fill in all password fields.");
+      return;
+    }
+    if (newPassword.length < 8) {
+      setForgotError("Password must be at least 8 characters long.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setForgotError("Passwords do not match.");
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token: resetToken,
+          new_password: newPassword,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail || "Something went wrong.");
+      }
+      setForgotSuccess("Your password has been reset successfully. You can now log in!");
+      // Reset state and close modal after 2.5 seconds
+      setTimeout(() => {
+        setShowForgotModal(false);
+        setForgotEmail("");
+        setForgotStep(1);
+        setResetToken("");
+        setNewPassword("");
+        setConfirmPassword("");
+        setForgotSuccess("");
+        // Autofill email for user convenience
+        setEmail(forgotEmail);
+      }, 2500);
+    } catch (err) {
+      setForgotError(err.message || "Failed to reset password.");
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -494,11 +584,7 @@ export default function SignIn() {
             >
               <button
                 type="button"
-                onClick={() =>
-                  alert(
-                    "Password reset functionality is under development."
-                  )
-                }
+                onClick={() => setShowForgotModal(true)}
                 style={{
                   background: "none",
                   border: "none",
@@ -582,6 +668,366 @@ export default function SignIn() {
           </Link>
         </div>
       </motion.div>
+
+      {/* Forgot Password Modal */}
+      <AnimatePresence>
+        {showForgotModal && (
+          <div
+            style={{
+              position: "fixed",
+              inset: 0,
+              backgroundColor: "rgba(3, 11, 18, 0.85)",
+              backdropFilter: "blur(8px)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              zIndex: 1000,
+            }}
+            onClick={() => {
+              if (!forgotLoading) {
+                setShowForgotModal(false);
+                setForgotError("");
+                setForgotSuccess("");
+              }
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.24 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                width: "100%",
+                maxWidth: "440px",
+                background: "rgba(10, 25, 41, 0.75)",
+                border: "1px solid rgba(0, 212, 255, 0.15)",
+                borderRadius: "16px",
+                padding: "2.5rem",
+                boxShadow: "0 20px 40px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)",
+                position: "relative",
+              }}
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => {
+                  setShowForgotModal(false);
+                  setForgotError("");
+                  setForgotSuccess("");
+                }}
+                disabled={forgotLoading}
+                style={{
+                  position: "absolute",
+                  top: "1.25rem",
+                  right: "1.25rem",
+                  background: "none",
+                  border: "none",
+                  color: "rgba(160, 200, 240, 0.6)",
+                  cursor: "pointer",
+                  padding: "0.25rem",
+                  transition: "color 0.2s",
+                }}
+                onMouseEnter={(e) => (e.target.style.color = "#00d4ff")}
+                onMouseLeave={(e) => (e.target.style.color = "rgba(160, 200, 240, 0.6)")}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+
+              {/* Title */}
+              <h3
+                style={{
+                  fontSize: "1.5rem",
+                  fontWeight: 700,
+                  color: "#e2f0ff",
+                  marginBottom: "0.75rem",
+                  letterSpacing: "-0.02em",
+                }}
+              >
+                {forgotStep === 1 ? "Forgot Password" : "Reset Password"}
+              </h3>
+              
+              <p
+                style={{
+                  fontSize: "0.875rem",
+                  color: "rgba(160, 200, 240, 0.75)",
+                  marginBottom: "1.5rem",
+                  lineHeight: 1.5,
+                }}
+              >
+                {forgotStep === 1
+                  ? "Enter your email address and we'll generate a password reset token."
+                  : "Enter your new password below to reset your credentials."}
+              </p>
+
+              {/* Messages */}
+              {forgotError && (
+                <div
+                  style={{
+                    background: "rgba(239, 68, 68, 0.1)",
+                    border: "1px solid rgba(239, 68, 68, 0.25)",
+                    color: "#f87171",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "8px",
+                    fontSize: "0.8125rem",
+                    marginBottom: "1.25rem",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {forgotError}
+                </div>
+              )}
+
+              {forgotSuccess && (
+                <div
+                  style={{
+                    background: "rgba(16, 185, 129, 0.1)",
+                    border: "1px solid rgba(16, 185, 129, 0.25)",
+                    color: "#34d399",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "8px",
+                    fontSize: "0.8125rem",
+                    marginBottom: "1.25rem",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {forgotSuccess}
+                </div>
+              )}
+
+              {/* Step 1 Form: Email Request */}
+              {forgotStep === 1 && (
+                <form onSubmit={handleForgotPassword}>
+                  <div style={{ marginBottom: "1.5rem" }}>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        color: "rgba(160, 200, 240, 0.6)",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Email Address
+                    </label>
+                    <div style={{ position: "relative" }}>
+                      <span
+                        style={{
+                          position: "absolute",
+                          left: "1rem",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          color: "rgba(160, 200, 240, 0.4)",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Mail size={16} />
+                      </span>
+                      <input
+                        type="email"
+                        required
+                        placeholder="name@example.com"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "0.875rem 1rem 0.875rem 2.75rem",
+                          background: "rgba(6, 22, 36, 0.8)",
+                          border: "1px solid rgba(0, 212, 255, 0.1)",
+                          borderRadius: "8px",
+                          color: "#fff",
+                          fontSize: "0.9375rem",
+                          outline: "none",
+                          transition: "all 0.2s",
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = "rgba(0, 212, 255, 0.5)";
+                          e.target.style.boxShadow = "0 0 0 3px rgba(0, 212, 255, 0.1)";
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = "rgba(0, 212, 255, 0.1)";
+                          e.target.style.boxShadow = "none";
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.5rem",
+                      padding: "0.875rem",
+                      fontSize: "0.9375rem",
+                      fontWeight: 600,
+                      borderRadius: "8px",
+                      border: "none",
+                      background: "linear-gradient(135deg, #00d4ff 0%, #090979 100%)",
+                      color: "#fff",
+                      cursor: "pointer",
+                      boxShadow: "0 4px 15px rgba(0, 212, 255, 0.2)",
+                    }}
+                  >
+                    {forgotLoading ? "Processing..." : "Generate Reset Link"}
+                    {!forgotLoading && <ArrowRight size={16} />}
+                  </button>
+                </form>
+              )}
+
+              {/* Step 2 Form: Reset Password */}
+              {forgotStep === 2 && (
+                <form onSubmit={handleResetPassword}>
+                  {/* New Password */}
+                  <div style={{ marginBottom: "1rem" }}>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        color: "rgba(160, 200, 240, 0.6)",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      New Password
+                    </label>
+                    <div style={{ position: "relative" }}>
+                      <span
+                        style={{
+                          position: "absolute",
+                          left: "1rem",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          color: "rgba(160, 200, 240, 0.4)",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Lock size={16} />
+                      </span>
+                      <input
+                        type="password"
+                        required
+                        placeholder="Minimum 8 characters"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "0.875rem 1rem 0.875rem 2.75rem",
+                          background: "rgba(6, 22, 36, 0.8)",
+                          border: "1px solid rgba(0, 212, 255, 0.1)",
+                          borderRadius: "8px",
+                          color: "#fff",
+                          fontSize: "0.9375rem",
+                          outline: "none",
+                          transition: "all 0.2s",
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = "rgba(0, 212, 255, 0.5)";
+                          e.target.style.boxShadow = "0 0 0 3px rgba(0, 212, 255, 0.1)";
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = "rgba(0, 212, 255, 0.1)";
+                          e.target.style.boxShadow = "none";
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Confirm Password */}
+                  <div style={{ marginBottom: "1.5rem" }}>
+                    <label
+                      style={{
+                        display: "block",
+                        fontSize: "0.75rem",
+                        fontWeight: 600,
+                        textTransform: "uppercase",
+                        letterSpacing: "0.05em",
+                        color: "rgba(160, 200, 240, 0.6)",
+                        marginBottom: "0.5rem",
+                      }}
+                    >
+                      Confirm New Password
+                    </label>
+                    <div style={{ position: "relative" }}>
+                      <span
+                        style={{
+                          position: "absolute",
+                          left: "1rem",
+                          top: "50%",
+                          transform: "translateY(-50%)",
+                          color: "rgba(160, 200, 240, 0.4)",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Lock size={16} />
+                      </span>
+                      <input
+                        type="password"
+                        required
+                        placeholder="Repeat new password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        style={{
+                          width: "100%",
+                          padding: "0.875rem 1rem 0.875rem 2.75rem",
+                          background: "rgba(6, 22, 36, 0.8)",
+                          border: "1px solid rgba(0, 212, 255, 0.1)",
+                          borderRadius: "8px",
+                          color: "#fff",
+                          fontSize: "0.9375rem",
+                          outline: "none",
+                          transition: "all 0.2s",
+                        }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = "rgba(0, 212, 255, 0.5)";
+                          e.target.style.boxShadow = "0 0 0 3px rgba(0, 212, 255, 0.1)";
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = "rgba(0, 212, 255, 0.1)";
+                          e.target.style.boxShadow = "none";
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={forgotLoading}
+                    style={{
+                      width: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "0.5rem",
+                      padding: "0.875rem",
+                      fontSize: "0.9375rem",
+                      fontWeight: 600,
+                      borderRadius: "8px",
+                      border: "none",
+                      background: "linear-gradient(135deg, #00d4ff 0%, #090979 100%)",
+                      color: "#fff",
+                      cursor: "pointer",
+                      boxShadow: "0 4px 15px rgba(0, 212, 255, 0.2)",
+                    }}
+                  >
+                    {forgotLoading ? "Resetting..." : "Reset Password"}
+                    {!forgotLoading && <ArrowRight size={16} />}
+                  </button>
+                </form>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

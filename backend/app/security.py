@@ -223,3 +223,55 @@ def get_current_user(
         )
 
     return user
+
+
+# =====================================================
+# PASSWORD RESET TOKENS
+# =====================================================
+
+def create_reset_token(user_id: int) -> str:
+    """
+    Create a JWT password reset token for a user (valid for 15 minutes).
+    """
+
+    expire = (
+        datetime.now(timezone.utc)
+        + timedelta(minutes=15)
+    )
+
+    payload = {
+        "sub": str(user_id),
+        "scope": "password_reset",
+        "exp": expire,
+    }
+
+    token = jwt.encode(
+        payload,
+        JWT_SECRET_KEY,
+        algorithm=JWT_ALGORITHM,
+    )
+
+    return token
+
+
+def decode_reset_token(token: str) -> dict | None:
+    """
+    Decode and validate a JWT password reset token.
+    """
+
+    try:
+
+        payload = jwt.decode(
+            token,
+            JWT_SECRET_KEY,
+            algorithms=[JWT_ALGORITHM],
+        )
+
+        if payload.get("scope") != "password_reset":
+            return None
+
+        return payload
+
+    except JWTError:
+
+        return None

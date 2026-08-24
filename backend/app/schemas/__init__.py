@@ -66,3 +66,27 @@ class LoginResponse(BaseModel):
     token_type: str
 
     user: SignupResponse
+
+
+# =====================================================
+# PASSWORD RESET
+# =====================================================
+
+class ForgotPasswordRequest(BaseModel):
+    email: str = Field(
+        min_length=5,
+        max_length=255,
+    )
+
+
+class ForgotPasswordResponse(BaseModel):
+    message: str
+    reset_token: str | None = None
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str = Field(
+        min_length=6,
+        max_length=128,
+    )

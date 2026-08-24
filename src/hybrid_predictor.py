@@ -28,10 +28,15 @@ class HybridPredictor:
                 f"Hybrid model not found: {hybrid_model_path}"
             )
 
-        if not os.path.exists(cnn_model_path):
-            raise FileNotFoundError(
-                f"Fine-tuned CNN model not found: {cnn_model_path}"
-            )
+        # If cnn_model_path is a file path string, validate and load it.
+        # Otherwise, assume it's a preloaded model object.
+        is_path_str = isinstance(cnn_model_path, str)
+
+        if is_path_str:
+            if not os.path.exists(cnn_model_path):
+                raise FileNotFoundError(
+                    f"Fine-tuned CNN model not found: {cnn_model_path}"
+                )
 
         if not os.path.exists(cnn_scaler_path):
             raise FileNotFoundError(
@@ -57,11 +62,13 @@ class HybridPredictor:
         # LOAD FINE-TUNED CNN
         # ==================================================
 
-        print("Loading fine-tuned CNN model...")
-
-        self.cnn_model = load_keras_model(cnn_model_path)
-
-        print("Fine-tuned CNN loaded.")
+        if is_path_str:
+            print("Loading fine-tuned CNN model...")
+            self.cnn_model = load_keras_model(cnn_model_path)
+            print("Fine-tuned CNN loaded.")
+        else:
+            print("Using preloaded fine-tuned CNN model instance.")
+            self.cnn_model = cnn_model_path
 
         # ==================================================
         # CNN FEATURE EXTRACTOR

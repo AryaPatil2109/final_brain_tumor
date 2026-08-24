@@ -68,12 +68,12 @@ class BrainTumorMLService:
         print("CNN predictor loaded.")
 
         # -------------------------------------------------
-        # Existing Hybrid V2 predictor
+        # Existing Hybrid V2 predictor (sharing the preloaded CNN model)
         # -------------------------------------------------
 
         self.hybrid_predictor = HybridPredictor(
             hybrid_model_path="models/hybrid_model_v2.keras",
-            cnn_model_path="models/cnn_model_finetuned (2).keras",
+            cnn_model_path=self.cnn_predictor.model,
             cnn_scaler_path="models/cnn_feature_scaler.pkl",
             morph_scaler_path="models/morphology_feature_scaler.pkl",
         )

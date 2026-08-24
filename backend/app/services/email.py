@@ -9,19 +9,22 @@ import os
 
 logger = logging.getLogger(__name__)
 
-RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+SENDER_EMAIL = os.getenv("SMTP_USERNAME", "noreply@neuroscan.ai")
+SENDER_NAME = os.getenv("SENDER_NAME", "NeuroScan AI")
+
 
 def send_reset_email(to_email: str, token: str) -> tuple[bool, str]:
     """
-    Send a password reset email using Resend HTTP API.
+    Send a password reset email using Brevo (Sendinblue) HTTP API.
     Returns (success: bool, error_message: str).
     """
-    if not RESEND_API_KEY:
+    if not BREVO_API_KEY:
         logger.warning(
-            "RESEND_API_KEY not configured. Cannot send email. "
+            "BREVO_API_KEY not configured. Cannot send email. "
             "Simulated reset token: %s", token
         )
-        return False, "RESEND_API_KEY is not configured on the server."
+        return False, "BREVO_API_KEY is not configured on the server."
 
     reset_link = f"{FRONTEND_URL}/reset-password?token={token}"
 
@@ -63,34 +66,40 @@ def send_reset_email(to_email: str, token: str) -> tuple[bool, str]:
     """
 
     payload = json.dumps({
-        "from": "NeuroScan AI <onboarding@resend.dev>",
-        "to": [to_email],
+        "sender": {
+            "name": SENDER_NAME,
+            "email": SENDER_EMAIL,
+        },
+        "to": [
+            {"email": to_email}
+        ],
         "subject": "Reset Your Password - NeuroScan AI",
-        "html": html,
+        "htmlContent": html,
     }).encode("utf-8")
 
     req = Request(
-        "https://api.resend.com/emails",
+        "https://api.brevo.com/v3/smtp/email",
         data=payload,
         headers={
-            "Authorization": f"Bearer {RESEND_API_KEY}",
-            "Content-Type": "application/json",
+            "accept": "application/json",
+            "content-type": "application/json",
+            "api-key": BREVO_API_KEY,
         },
         method="POST",
     )
 
     try:
-        with urlopen(req, timeout=10) as resp:
+        with urlopen(req, timeout=15) as resp:
             resp_body = resp.read().decode("utf-8")
-            logger.info("Resend API response: %s", resp_body)
+            logger.info("Brevo API response: %s", resp_body)
             return True, ""
     except HTTPError as e:
         body = e.read().decode("utf-8", errors="ignore")
-        logger.error("Resend HTTP error %s: %s", e.code, body)
-        return False, f"Resend API error ({e.code}): {body}"
+        logger.error("Brevo HTTP error %s: %s", e.code, body)
+        return False, f"Brevo API error ({e.code}): {body}"
     except URLError as e:
-        logger.error("Resend URL error: %s", e.reason)
-        return False, f"Resend connection error: {e.reason}"
+        logger.error("Brevo URL error: %s", e.reason)
+        return False, f"Brevo connection error: {e.reason}"
     except Exception as e:
-        logger.error("Failed to send email via Resend: %s", e)
+        logger.error("Failed to send email via Brevo: %s", e)
         return False, str(e)

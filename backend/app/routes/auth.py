@@ -317,11 +317,11 @@ def forgot_password(
     reset_token = create_reset_token(user.id)
 
     # Send reset email
-    email_sent = send_reset_email(user.email, reset_token)
+    email_sent, email_error = send_reset_email(user.email, reset_token)
     if not email_sent:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to send password reset email. Please try again later or verify SMTP settings.",
+            detail=f"Failed to send password reset email: {email_error}",
         )
 
     return ForgotPasswordResponse(

@@ -12,9 +12,10 @@ from backend.app.config import (
 
 logger = logging.getLogger(__name__)
 
-def send_reset_email(to_email: str, token: str) -> bool:
+def send_reset_email(to_email: str, token: str) -> tuple[bool, str]:
     """
     Send a password reset email using SMTP.
+    Returns (success: bool, error_message: str).
     """
     # Verify if SMTP is configured
     if not SMTP_USERNAME or not SMTP_PASSWORD:
@@ -22,7 +23,7 @@ def send_reset_email(to_email: str, token: str) -> bool:
             "SMTP credentials not configured. Cannot send email. "
             "Simulated reset token: %s", token
         )
-        return False
+        return False, "SMTP credentials (SMTP_USERNAME / SMTP_PASSWORD) are not configured on the server."
 
     reset_link = f"{FRONTEND_URL}/reset-password?token={token}"
 
@@ -83,7 +84,7 @@ def send_reset_email(to_email: str, token: str) -> bool:
         server.login(SMTP_USERNAME, SMTP_PASSWORD)
         server.sendmail(SMTP_USERNAME, to_email, message.as_string())
         server.quit()
-        return True
+        return True, ""
     except Exception as e:
         logger.error("Failed to send SMTP email: %s", e)
-        return False
+        return False, str(e)
